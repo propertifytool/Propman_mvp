@@ -1,0 +1,14 @@
+{% extends "core/base.html" %}
+{% block content %}
+  <h3>{{ title }}</h3>
+
+  <form method="post" style="display:flex; flex-direction:column; gap:10px; max-width: 520px;">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save</button>
+  </form>
+
+  <p style="margin-top: 12px;">
+    <a href="javascript:history.back()">Back</a>
+  </p>
+{% endblock %}

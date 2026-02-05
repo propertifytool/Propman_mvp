@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block content %}
+  <h3>Tenants</h3>
+  <p><a href="{% url 'core:tenant_create' %}">+ Add Tenant</a></p>
+
+  {% if tenants %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>Name</th><th>Property</th><th>Rent</th><th>Active</th><th>Lease Start</th><th>Lease End</th><th>Actions</th>
+
+      </tr>
+      {% for t in tenants %}
+        <tr>
+          <td>
+            <a href="{% url 'core:tenant_edit' t.id %}">{{ t.full_name }}</a>
+          </td>
+          <td>{{ t.property.name }}</td>
+          <td>{{ t.monthly_rent }}</td>
+          <td>{{ t.is_active }}</td>
+          <td>{{ t.lease_start }}</td>
+          <td>{{ t.lease_end|default:"-" }}</td>
+          <td>
+            <a href="{% url 'core:tenant_delete' t.id %}">Delete</a>
+          </td>
+          
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No tenants yet. Add one via <a href="/admin/core/tenant/add/">Admin</a>.</p>
+  {% endif %}
+{% endblock %}

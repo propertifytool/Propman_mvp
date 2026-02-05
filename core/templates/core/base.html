@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PropMan MVP</title>
+</head>
+<body>
+  <div style="max-width: 1000px; margin: 20px auto; font-family: Arial, sans-serif;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>PropMan MVP</h2>
+      <div>
+        Logged in as <b>{{ request.user.username }}</b> |
+        <a href="/admin/logout/">Logout</a>
+      </div>
+    </div>
+
+    <hr />
+
+    <nav style="display:flex; gap:12px; margin-bottom: 16px;">
+      <a href="{% url 'core:dashboard' %}">Dashboard</a>
+      <a href="{% url 'core:properties_list' %}">Properties</a>
+      <a href="{% url 'core:tenants_list' %}">Tenants</a>
+      <a href="{% url 'core:rent_list' %}">Rent</a>
+      <a href="{% url 'core:maintenance_list' %}">Maintenance</a>
+      <a href="/admin/">Admin</a>
+    </nav>
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

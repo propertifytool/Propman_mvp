@@ -1,0 +1,30 @@
+{% extends "core/base.html" %}
+{% block content %}
+  <h3>Properties</h3>
+  <p><a href="{% url 'core:property_create' %}">+ Add Property</a></p>
+
+  {% if properties %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>Name</th><th>City</th><th>Country</th><th>Type</th><th>Created</th> <th>Actions</th>
+      </tr>
+      {% for p in properties %}
+        <tr>
+          <td><a href="{% url 'core:property_edit' p.id %}">{{ p.name }}</a></td>
+          <td>{{ p.city }}</td>
+          <td>{{ p.country }}</td>
+          <td>{{ p.property_type }}</td>
+          <td>{{ p.created_at }}</td>
+          <td>
+            <a href="{% url 'core:property_delete' p.id %}">Delete</a>
+          </td>
+        </tr>
+      {% endfor %}
+     
+      
+      
+    </table>
+  {% else %}
+    <p>No properties yet. Add one via <a href="/admin/core/property/add/">Admin</a>.</p>
+  {% endif %}
+{% endblock %}

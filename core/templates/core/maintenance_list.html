@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block content %}
+  <h3>Maintenance Requests</h3>
+  <p><a href="{% url 'core:maintenance_create' %}">+ Add Maintenance Request</a></p>
+
+  {% if requests %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>Title</th><th>Property</th><th>Priority</th><th>Status</th><th>Vendor</th><th>Created</th><th>Actions</th>
+
+      </tr>
+      {% for m in requests %}
+        <tr>
+            <td><a href="{% url 'core:maintenance_edit' m.id %}">{{ m.title }}</a></td>
+
+          <td>{{ m.property.name }}</td>
+          <td>{{ m.priority }}</td>
+          <td>{{ m.status }}</td>
+          <td>{{ m.vendor_name|default:"-" }}</td>
+          <td>{{ m.created_at }}</td>
+          <td>
+            <a href="{% url 'core:maintenance_delete' m.id %}">Delete</a>
+          </td>
+          
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No maintenance requests yet. Add one via <a href="/admin/core/maintenancerequest/add/">Admin</a>.</p>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block content %}
+  <h3>Rent Payments</h3>
+  <p><a href="{% url 'core:rent_create' %}">+ Add Rent Payment</a></p>
+
+  {% if rent_payments %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th>Tenant</th><th>Property</th><th>Period</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Paid Date</th><th>Actions</th>
+
+      </tr>
+      {% for r in rent_payments %}
+        <tr>
+          <td><a href="{% url 'core:rent_edit' r.id %}">{{ r.tenant.full_name }}</a></td>
+          <td>{{ r.tenant.property.name }}</td>
+          <td>{{ r.period_month }}/{{ r.period_year }}</td>
+          <td>{{ r.due_date }}</td>
+          <td>{{ r.amount_due }}</td>
+          <td>{{ r.status }}</td>
+          <td>{{ r.paid_date|default:"-" }}</td>
+          <td>
+            <a href="{% url 'core:rent_delete' r.id %}">Delete</a>
+          </td>
+          
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No rent records yet. Add one via <a href="/admin/core/rentpayment/add/">Admin</a>.</p>
+  {% endif %}
+{% endblock %}
