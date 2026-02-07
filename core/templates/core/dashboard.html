@@ -1,68 +1,93 @@
 {% extends "core/base.html" %}
+{% load humanize %}
 {% block content %}
-  <h3>Dashboard</h3>
+  <h2>Dashboard</h2>
 
-  <h4>Portfolio</h4>
-  <ul>
-    <li><b>Properties:</b> {{ properties_count }}</li>
-    <li><b>Active Tenants:</b> {{ active_tenants_count }}</li>
-  </ul>
+  <h3>Portfolio Snapshot</h3>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Properties</div>
+      <div class="metric-value">{{ properties_count }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Active Tenants</div>
+      <div class="metric-value">{{ active_tenants_count }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Open Maintenance</div>
+      <div class="metric-value">{{ open_maintenance_count }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Urgent Open</div>
+      <div class="metric-value">{{ urgent_open_count }}</div>
+    </div>
+  </div>
 
-  <h4>Rent Overview</h4>
-  <ul>
-    <li><b>Paid:</b> {{ rent_paid_count }} (Total: {{ rent_paid_total }})</li>
-    <li><b>Due:</b> {{ rent_due_count }} (Total: {{ rent_due_total }})</li>
-    <li><b>Late:</b> {{ rent_late_count }} (Total: {{ rent_late_total }})</li>
-    <h4>Rent This Month ({{ current_month }}/{{ current_year }})</h4>
-  <ul>
-  <li><b>Paid:</b> {{ paid_this_month }}</li>
-  <li><b>Due:</b> {{ due_this_month }}</li>
-  <li><b>Late:</b> {{ late_this_month }}</li>
-  </ul>
+  <h3>Rent Overview</h3>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Paid (Count)</div>
+      <div class="metric-value">{{ rent_paid_count }}</div>
+      <div class="muted">${{ rent_paid_total|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Due (Count)</div>
+      <div class="metric-value">{{ rent_due_count }}</div>
+      <div class="muted">${{ rent_due_total|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Late (Count)</div>
+      <div class="metric-value">{{ rent_late_count }}</div>
+      <div class="muted">${{ rent_late_total|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
 
-  </ul>
+  <h3>Rent This Month ({{ current_month }}/{{ current_year }})</h3>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Paid</div>
+      <div class="metric-value">${{ paid_this_month|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Due</div>
+      <div class="metric-value">${{ due_this_month|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Late</div>
+      <div class="metric-value">${{ late_this_month|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">In Progress Maint.</div>
+      <div class="metric-value">{{ in_progress_maintenance_count }}</div>
+    </div>
+  </div>
 
-  <h4>Maintenance</h4>
-  <ul>
-    <li><b>Open:</b> {{ open_maintenance_count }}</li>
-    <li><b>In Progress:</b> {{ in_progress_maintenance_count }}</li>
-    <li><b>Urgent Open:</b> {{ urgent_open_count }}</li>
-    <li><b>High Priority Open:</b> {{ high_open_count }}</li>
-  </ul>
-
-  <h4>Per Property Summary</h4>
-
+  <h3>Per Property Summary</h3>
   {% if property_summaries %}
-  <table border="1" cellpadding="6" cellspacing="0">
-    <tr>
-      <th>Property</th>
-      <th>Active Tenants</th>
-      <th>Rent Paid (Total)</th>
-      <th>Rent Due (Total)</th>
-      <th>Rent Late (Total)</th>
-      <th>Open Maintenance</th>
-      <th>Urgent Open</th>
-    </tr>
-
-    {% for row in property_summaries %}
+    <table class="table">
       <tr>
-        <td><a href="{% url 'core:property_detail' row.property.id %}">{{ row.property.name }}</a></td>
-
-        <td>{{ row.active_tenants }}</td>
-        <td>{{ row.rent_paid_total }}</td>
-        <td>{{ row.rent_due_total }}</td>
-        <td>{{ row.rent_late_total }}</td>
-        <td>{{ row.open_maintenance }}</td>
-        <td>{{ row.urgent_open }}</td>
+        <th>Property</th>
+        <th>Active Tenants</th>
+        <th>Rent Paid</th>
+        <th>Rent Due</th>
+        <th>Rent Late</th>
+        <th>Open Maint.</th>
+        <th>Urgent</th>
       </tr>
-    {% endfor %}
-  </table>
-{% else %}
-  <p>No properties yet.</p>
-{% endif %}
-
-
-  <p style="margin-top: 12px;">
-    Next: we can add “This Month Only” filtering and a property-level breakdown.
-  </p>
+      {% for row in property_summaries %}
+        <tr>
+          <td><a href="{% url 'core:property_detail' row.property.id %}">{{ row.property.name }}</a></td>
+          <td>{{ row.active_tenants }}</td>
+          <td>${{ row.rent_paid_total|floatformat:2|intcomma }}</td>
+          <td>${{ row.rent_due_total|floatformat:2|intcomma }}</td>
+          <td>${{ row.rent_late_total|floatformat:2|intcomma }}</td>
+          <td>{{ row.open_maintenance }}</td>
+          <td>{{ row.urgent_open }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No properties yet. Add one to start seeing dashboard insights.</p>
+    <p><a class="btn btn-primary" href="{% url 'core:property_create' %}">Add Property</a></p>
+  {% endif %}
 {% endblock %}
