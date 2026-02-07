@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% block content %}
+  <h2>Log In</h2>
+  <p class="muted">Sign in to access your property dashboard.</p>
+
+  <form method="post" style="display:grid; gap:12px; max-width:420px;">
+    {% csrf_token %}
+
+    <div>
+      <label for="id_username" style="display:block; margin-bottom:6px; font-weight:600;">Username <span style="color:#b91c1c;">*</span></label>
+      {{ form.username }}
+    </div>
+
+    <div>
+      <label for="id_password" style="display:block; margin-bottom:6px; font-weight:600;">Password <span style="color:#b91c1c;">*</span></label>
+      {{ form.password }}
+    </div>
+
+    {% if form.errors %}
+      <div class="message error">Invalid username or password. Please try again.</div>
+    {% endif %}
+
+    {% if next %}
+      <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+
+    <div style="display:flex; gap:10px;">
+      <button type="submit" class="btn btn-primary">Log in</button>
+      <a class="btn" href="/admin/login/">Admin login</a>
+    </div>
+  </form>
+{% endblock %}
