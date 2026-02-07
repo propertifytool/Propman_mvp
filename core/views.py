@@ -21,6 +21,10 @@ def landing_page(request):
     return render(request, "core/landing.html")
 
 
+def about_page(request):
+    return render(request, "core/about.html")
+
+
 def _render_form(request, form, title, cancel_url):
     return render(
         request,
