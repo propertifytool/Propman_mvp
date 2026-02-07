@@ -1,50 +1,51 @@
 {% extends "core/base.html" %}
+{% load humanize %}
 {% block content %}
-  <h3>Property: {{ property.name }}</h3>
+  <h2>Property: {{ property.name }}</h2>
   <p>
-    <a href="{% url 'core:tenant_create' %}">+ Add Tenant</a> |
-    <a href="{% url 'core:rent_create' %}">+ Add Rent Payment</a> |
-    <a href="{% url 'core:maintenance_create' %}">+ Add Maintenance</a>
+    <a class="btn" href="{% url 'core:tenant_create' %}">+ Add Tenant</a>
+    <a class="btn" href="{% url 'core:rent_create' %}">+ Add Rent Payment</a>
+    <a class="btn" href="{% url 'core:maintenance_create' %}">+ Add Maintenance</a>
   </p>
-  
-  <p><b>Address:</b> {{ property.address }}, {{ property.city }}, {{ property.country }}</p>
-  <p><b>Type:</b> {{ property.property_type }}</p>
 
-  <hr />
+  <p><strong>Address:</strong> {{ property.address }}, {{ property.city }}, {{ property.country }}</p>
+  <p><strong>Type:</strong> {{ property.get_property_type_display }}</p>
 
-  <h4>Rent (This Month {{ current_month }}/{{ current_year }})</h4>
+  <h3>Rent (This Month {{ current_month }}/{{ current_year }})</h3>
   <ul>
-    <li><b>Paid:</b> {{ paid_this_month }}</li>
-    <li><b>Due:</b> {{ due_this_month }}</li>
-    <li><b>Late:</b> <span style="color:red;">{{ late_this_month }}</span></li>
-
+    <li><strong>Paid:</strong> ${{ paid_this_month|floatformat:2|intcomma }}</li>
+    <li><strong>Due:</strong> ${{ due_this_month|floatformat:2|intcomma }}</li>
+    <li><strong>Late:</strong> ${{ late_this_month|floatformat:2|intcomma }}</li>
   </ul>
 
-  <h4>Rent (All Time Totals)</h4>
+  <h3>Rent (All Time Totals)</h3>
   <ul>
-    <li><b>Paid:</b> {{ rent_paid_total }}</li>
-    <li><b>Due:</b> {{ rent_due_total }}</li>
-    <li><b>Late:</b> {{ rent_late_total }}</li>
+    <li><strong>Paid:</strong> ${{ rent_paid_total|floatformat:2|intcomma }}</li>
+    <li><strong>Due:</strong> ${{ rent_due_total|floatformat:2|intcomma }}</li>
+    <li><strong>Late:</strong> ${{ rent_late_total|floatformat:2|intcomma }}</li>
   </ul>
 
-  <hr />
-
-  <h4>Tenants</h4>
+  <h3>Tenants</h3>
   {% if tenants %}
-    <ul>
+    <table class="table">
+      <tr>
+        <th>Name</th><th>Active</th><th>Monthly Rent</th>
+      </tr>
       {% for t in tenants %}
-        <li>{{ t.full_name }} — Active: {{ t.is_active }} — Rent: {{ t.monthly_rent }}</li>
+        <tr>
+          <td>{{ t.full_name }}</td>
+          <td>{% if t.is_active %}Yes{% else %}No{% endif %}</td>
+          <td>${{ t.monthly_rent|floatformat:2|intcomma }}</td>
+        </tr>
       {% endfor %}
-    </ul>
+    </table>
   {% else %}
-    <p>No tenants for this property yet.</p>
+    <p class="muted">No tenants for this property yet.</p>
   {% endif %}
 
-  <hr />
-
-  <h4>Recent Rent Payments (latest 25)</h4>
+  <h3>Recent Rent Payments (Latest 25)</h3>
   {% if rent_payments %}
-    <table border="1" cellpadding="6" cellspacing="0">
+    <table class="table">
       <tr>
         <th>Tenant</th><th>Period</th><th>Due Date</th><th>Amount</th><th>Status</th><th>Paid Date</th>
       </tr>
@@ -52,50 +53,47 @@
         <tr>
           <td>{{ r.tenant.full_name }}</td>
           <td>{{ r.period_month }}/{{ r.period_year }}</td>
-          <td>{{ r.due_date }}</td>
-          <td>{{ r.amount_due }}</td>
-          <td>{{ r.status }}</td>
-          <td>{{ r.paid_date|default:"-" }}</td>
+          <td>{{ r.due_date|date:"Y-m-d" }}</td>
+          <td>${{ r.amount_due|floatformat:2|intcomma }}</td>
+          <td>
+            {% if r.status == "PAID" %}
+              <span class="badge badge-paid">PAID</span>
+            {% elif r.status == "LATE" %}
+              <span class="badge badge-late">LATE</span>
+            {% else %}
+              <span class="badge badge-due">DUE</span>
+            {% endif %}
+          </td>
+          <td>{{ r.paid_date|date:"Y-m-d"|default:"-" }}</td>
         </tr>
       {% endfor %}
     </table>
   {% else %}
-    <p>No rent payments yet.</p>
+    <p class="muted">No rent payments yet.</p>
   {% endif %}
 
-  <hr />
-
-  <h4>Maintenance (latest 25)</h4>
+  <h3>Maintenance (Latest 25)</h3>
   {% if maintenance %}
-    <table border="1" cellpadding="6" cellspacing="0">
+    <table class="table">
       <tr>
         <th>Title</th><th>Priority</th><th>Status</th><th>Vendor</th><th>Created</th>
       </tr>
       {% for m in maintenance %}
         <tr>
           <td>{{ m.title }}</td>
-          <td>
-            {% if m.priority == "URGENT" %}
-              <span style="color:red;"><b>{{ m.priority }}</b></span>
-            {% elif m.priority == "HIGH" %}
-              <span style="color:orange;"><b>{{ m.priority }}</b></span>
-            {% else %}
-              {{ m.priority }}
-            {% endif %}
-          </td>
-          
-          <td>{{ m.status }}</td>
+          <td>{{ m.get_priority_display }}</td>
+          <td>{{ m.get_status_display }}</td>
           <td>{{ m.vendor_name|default:"-" }}</td>
-          <td>{{ m.created_at }}</td>
+          <td>{{ m.created_at|date:"Y-m-d" }}</td>
         </tr>
       {% endfor %}
     </table>
   {% else %}
-    <p>No maintenance requests yet.</p>
+    <p class="muted">No maintenance requests yet.</p>
   {% endif %}
 
   <p style="margin-top: 14px;">
-    <a href="{% url 'core:properties_list' %}">Back to Properties</a>  | <a href="{% url 'core:dashboard' %}">Dashboard</a>
-
+    <a class="btn" href="{% url 'core:properties_list' %}">Back to Properties</a>
+    <a class="btn" href="{% url 'core:dashboard_home' %}">Dashboard</a>
   </p>
 {% endblock %}
