@@ -1,6 +1,13 @@
 
 from django.contrib import admin
-from .models import Property, Tenant, RentPayment, MaintenanceRequest
+from .models import MaintenanceRequest, Property, RentPayment, Tenant, UserProfile
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "role")
+    list_filter = ("role",)
+    search_fields = ("user__username", "user__email")
 
 
 @admin.register(Property)
@@ -12,9 +19,9 @@ class PropertyAdmin(admin.ModelAdmin):
 
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
-    list_display = ("full_name", "property", "monthly_rent", "is_active", "lease_start", "lease_end")
+    list_display = ("full_name", "user", "property", "monthly_rent", "is_active", "lease_start", "lease_end")
     list_filter = ("is_active", "lease_start")
-    search_fields = ("full_name", "email", "phone", "property__name", "property__city")
+    search_fields = ("full_name", "email", "phone", "property__name", "property__city", "user__username")
 
 
 @admin.register(RentPayment)

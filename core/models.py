@@ -3,6 +3,19 @@ from django.conf import settings
 from django.db import models
 
 
+class UserProfile(models.Model):
+    class Role(models.TextChoices):
+        LANDLORD = "LANDLORD", "Landlord"
+        MANAGER = "MANAGER", "Manager"
+        TENANT = "TENANT", "Tenant"
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.LANDLORD)
+
+    def __str__(self) -> str:
+        return f"{self.user.username} ({self.role})"
+
+
 class Property(models.Model):
     class PropertyType(models.TextChoices):
         APARTMENT = "APARTMENT", "Apartment"
@@ -32,6 +45,13 @@ class Property(models.Model):
 
 
 class Tenant(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="tenant_account",
+        null=True,
+        blank=True,
+    )
     property = models.ForeignKey(
         Property,
         on_delete=models.CASCADE,
@@ -112,4 +132,3 @@ class MaintenanceRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.title} - {self.property.name}"
-

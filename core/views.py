@@ -4,11 +4,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import MaintenanceRequestForm, PropertyForm, RentPaymentForm, TenantForm
-from .models import MaintenanceRequest, Property, RentPayment, Tenant
+from .models import MaintenanceRequest, Property, RentPayment, Tenant, UserProfile
 
 
 def healthz(request):
@@ -37,12 +37,59 @@ def _render_form(request, form, title, cancel_url):
     )
 
 
+def _get_role(user):
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    return profile.role
+
+
+def _can_manage(user):
+    role = _get_role(user)
+    return role in (UserProfile.Role.LANDLORD, UserProfile.Role.MANAGER)
+
+
+def _property_queryset(user):
+    role = _get_role(user)
+    if role == UserProfile.Role.MANAGER:
+        return Property.objects.all()
+    if role == UserProfile.Role.TENANT:
+        return Property.objects.filter(tenants__user=user).distinct()
+    return Property.objects.filter(owner=user)
+
+
+def _manageable_property_queryset(user):
+    if not _can_manage(user):
+        return Property.objects.none()
+    return _property_queryset(user)
+
+
+def _tenant_queryset(user):
+    role = _get_role(user)
+    if role == UserProfile.Role.MANAGER:
+        return Tenant.objects.all()
+    if role == UserProfile.Role.TENANT:
+        return Tenant.objects.filter(user=user)
+    return Tenant.objects.filter(property__owner=user)
+
+
+def _rent_queryset(user):
+    return RentPayment.objects.filter(tenant__in=_tenant_queryset(user))
+
+
+def _maintenance_queryset(user):
+    return MaintenanceRequest.objects.filter(property__in=_property_queryset(user))
+
+
+def _forbidden_manage(request):
+    messages.error(request, "You do not have permission to modify records.")
+    return HttpResponseForbidden("Forbidden")
+
+
 @login_required
 def dashboard(request):
-    properties_qs = Property.objects.filter(owner=request.user)
-    tenants_qs = Tenant.objects.filter(property__owner=request.user, is_active=True)
-    rent_qs = RentPayment.objects.filter(tenant__property__owner=request.user)
-    maintenance_qs = MaintenanceRequest.objects.filter(property__owner=request.user)
+    properties_qs = _property_queryset(request.user)
+    tenants_qs = _tenant_queryset(request.user).filter(is_active=True)
+    rent_qs = _rent_queryset(request.user)
+    maintenance_qs = _maintenance_queryset(request.user)
 
     property_summaries = []
     for prop in properties_qs.order_by("name"):
@@ -125,20 +172,20 @@ def dashboard(request):
 
 @login_required
 def properties_list(request):
-    properties = Property.objects.filter(owner=request.user).order_by("-created_at")
+    properties = _property_queryset(request.user).order_by("-created_at")
     return render(request, "core/properties_list.html", {"properties": properties})
 
 
 @login_required
 def tenants_list(request):
-    tenants = Tenant.objects.filter(property__owner=request.user).order_by("-created_at")
+    tenants = _tenant_queryset(request.user).order_by("-created_at")
     return render(request, "core/tenants_list.html", {"tenants": tenants})
 
 
 @login_required
 def rent_list(request):
     rent_payments = (
-        RentPayment.objects.filter(tenant__property__owner=request.user)
+        _rent_queryset(request.user)
         .select_related("tenant", "tenant__property")
         .order_by("-period_year", "-period_month", "due_date")
     )
@@ -148,7 +195,7 @@ def rent_list(request):
 @login_required
 def maintenance_list(request):
     requests = (
-        MaintenanceRequest.objects.filter(property__owner=request.user)
+        _maintenance_queryset(request.user)
         .select_related("property")
         .order_by("-created_at")
     )
@@ -157,6 +204,9 @@ def maintenance_list(request):
 
 @login_required
 def property_create(request):
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
     if request.method == "POST":
         form = PropertyForm(request.POST)
         if form.is_valid():
@@ -174,15 +224,20 @@ def property_create(request):
 
 @login_required
 def tenant_create(request):
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    allowed_properties = _manageable_property_queryset(request.user)
+
     if request.method == "POST":
         form = TenantForm(request.POST)
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
 
         if form.is_valid():
             tenant = form.save(commit=False)
-            if tenant.property.owner != request.user:
+            if not allowed_properties.filter(pk=tenant.property_id).exists():
                 form.add_error("property", "Invalid property selection.")
-                messages.error(request, "Please select one of your properties.")
+                messages.error(request, "Please select a valid property.")
             else:
                 try:
                     with transaction.atomic():
@@ -216,21 +271,26 @@ def tenant_create(request):
             messages.error(request, "Please correct the errors below.")
     else:
         form = TenantForm()
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
 
     return _render_form(request, form, "Add Tenant", "core:tenants_list")
 
 
 @login_required
 def rent_create(request):
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    allowed_tenants = _tenant_queryset(request.user)
+
     if request.method == "POST":
         form = RentPaymentForm(request.POST)
-        form.fields["tenant"].queryset = Tenant.objects.filter(property__owner=request.user)
+        form.fields["tenant"].queryset = allowed_tenants
         if form.is_valid():
             rp = form.save(commit=False)
-            if rp.tenant.property.owner != request.user:
+            if not allowed_tenants.filter(pk=rp.tenant_id).exists():
                 form.add_error("tenant", "Invalid tenant selection.")
-                messages.error(request, "Please select one of your tenants.")
+                messages.error(request, "Please select a valid tenant.")
             else:
                 rp.save()
                 messages.success(request, "Rent payment created successfully.")
@@ -239,22 +299,27 @@ def rent_create(request):
             messages.error(request, "Please correct the errors below.")
     else:
         form = RentPaymentForm()
-        form.fields["tenant"].queryset = Tenant.objects.filter(property__owner=request.user)
+        form.fields["tenant"].queryset = allowed_tenants
 
     return _render_form(request, form, "Add Rent Payment", "core:rent_list")
 
 
 @login_required
 def maintenance_create(request):
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    allowed_properties = _manageable_property_queryset(request.user)
+
     if request.method == "POST":
         form = MaintenanceRequestForm(request.POST)
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
         if form.is_valid():
             req = form.save(commit=False)
             req.created_by = request.user
-            if req.property.owner != request.user:
+            if not allowed_properties.filter(pk=req.property_id).exists():
                 form.add_error("property", "Invalid property selection.")
-                messages.error(request, "Please select one of your properties.")
+                messages.error(request, "Please select a valid property.")
             else:
                 req.save()
                 messages.success(request, "Maintenance request created successfully.")
@@ -263,14 +328,17 @@ def maintenance_create(request):
             messages.error(request, "Please correct the errors below.")
     else:
         form = MaintenanceRequestForm()
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
 
     return _render_form(request, form, "Add Maintenance Request", "core:maintenance_list")
 
 
 @login_required
 def property_edit(request, pk):
-    obj = get_object_or_404(Property, pk=pk, owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    obj = get_object_or_404(_property_queryset(request.user), pk=pk)
 
     if request.method == "POST":
         form = PropertyForm(request.POST, instance=obj)
@@ -287,16 +355,20 @@ def property_edit(request, pk):
 
 @login_required
 def tenant_edit(request, pk):
-    tenant = get_object_or_404(Tenant, pk=pk, property__owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    tenant = get_object_or_404(_tenant_queryset(request.user), pk=pk)
+    allowed_properties = _manageable_property_queryset(request.user)
 
     if request.method == "POST":
         form = TenantForm(request.POST, instance=tenant)
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
         if form.is_valid():
             updated = form.save(commit=False)
-            if updated.property.owner != request.user:
+            if not allowed_properties.filter(pk=updated.property_id).exists():
                 form.add_error("property", "Invalid property selection.")
-                messages.error(request, "Please select one of your properties.")
+                messages.error(request, "Please select a valid property.")
             else:
                 updated.save()
                 messages.success(request, "Tenant updated successfully.")
@@ -305,24 +377,28 @@ def tenant_edit(request, pk):
             messages.error(request, "Please correct the errors below.")
     else:
         form = TenantForm(instance=tenant)
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
 
     return _render_form(request, form, "Edit Tenant", "core:tenants_list")
 
 
 @login_required
 def rent_edit(request, pk):
-    rent_payment = get_object_or_404(RentPayment, pk=pk, tenant__property__owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    rent_payment = get_object_or_404(_rent_queryset(request.user), pk=pk)
     previous_status = rent_payment.status
+    allowed_tenants = _tenant_queryset(request.user)
 
     if request.method == "POST":
         form = RentPaymentForm(request.POST, instance=rent_payment)
-        form.fields["tenant"].queryset = Tenant.objects.filter(property__owner=request.user)
+        form.fields["tenant"].queryset = allowed_tenants
         if form.is_valid():
             updated = form.save(commit=False)
-            if updated.tenant.property.owner != request.user:
+            if not allowed_tenants.filter(pk=updated.tenant_id).exists():
                 form.add_error("tenant", "Invalid tenant selection.")
-                messages.error(request, "Please select one of your tenants.")
+                messages.error(request, "Please select a valid tenant.")
             else:
                 updated.save()
                 if previous_status != RentPayment.Status.PAID and updated.status == RentPayment.Status.PAID:
@@ -334,24 +410,28 @@ def rent_edit(request, pk):
             messages.error(request, "Please correct the errors below.")
     else:
         form = RentPaymentForm(instance=rent_payment)
-        form.fields["tenant"].queryset = Tenant.objects.filter(property__owner=request.user)
+        form.fields["tenant"].queryset = allowed_tenants
 
     return _render_form(request, form, "Edit Rent Payment", "core:rent_list")
 
 
 @login_required
 def maintenance_edit(request, pk):
-    req = get_object_or_404(MaintenanceRequest, pk=pk, property__owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    req = get_object_or_404(_maintenance_queryset(request.user), pk=pk)
+    allowed_properties = _manageable_property_queryset(request.user)
 
     if request.method == "POST":
         form = MaintenanceRequestForm(request.POST, instance=req)
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
         if form.is_valid():
             updated = form.save(commit=False)
             updated.created_by = req.created_by
-            if updated.property.owner != request.user:
+            if not allowed_properties.filter(pk=updated.property_id).exists():
                 form.add_error("property", "Invalid property selection.")
-                messages.error(request, "Please select one of your properties.")
+                messages.error(request, "Please select a valid property.")
             else:
                 updated.save()
                 messages.success(request, "Maintenance request updated successfully.")
@@ -360,14 +440,17 @@ def maintenance_edit(request, pk):
             messages.error(request, "Please correct the errors below.")
     else:
         form = MaintenanceRequestForm(instance=req)
-        form.fields["property"].queryset = Property.objects.filter(owner=request.user)
+        form.fields["property"].queryset = allowed_properties
 
     return _render_form(request, form, "Edit Maintenance Request", "core:maintenance_list")
 
 
 @login_required
 def property_delete(request, pk):
-    obj = get_object_or_404(Property, pk=pk, owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    obj = get_object_or_404(_property_queryset(request.user), pk=pk)
     if request.method == "POST":
         obj.delete()
         messages.success(request, "Property deleted successfully.")
@@ -381,7 +464,10 @@ def property_delete(request, pk):
 
 @login_required
 def tenant_delete(request, pk):
-    obj = get_object_or_404(Tenant, pk=pk, property__owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    obj = get_object_or_404(_tenant_queryset(request.user), pk=pk)
     if request.method == "POST":
         obj.delete()
         messages.success(request, "Tenant deleted successfully.")
@@ -395,7 +481,10 @@ def tenant_delete(request, pk):
 
 @login_required
 def rent_delete(request, pk):
-    obj = get_object_or_404(RentPayment, pk=pk, tenant__property__owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    obj = get_object_or_404(_rent_queryset(request.user), pk=pk)
     if request.method == "POST":
         obj.delete()
         messages.success(request, "Rent payment deleted successfully.")
@@ -409,7 +498,10 @@ def rent_delete(request, pk):
 
 @login_required
 def maintenance_delete(request, pk):
-    obj = get_object_or_404(MaintenanceRequest, pk=pk, property__owner=request.user)
+    if not _can_manage(request.user):
+        return _forbidden_manage(request)
+
+    obj = get_object_or_404(_maintenance_queryset(request.user), pk=pk)
     if request.method == "POST":
         obj.delete()
         messages.success(request, "Maintenance request deleted successfully.")
@@ -423,13 +515,13 @@ def maintenance_delete(request, pk):
 
 @login_required
 def property_detail(request, pk):
-    prop = get_object_or_404(Property, pk=pk, owner=request.user)
+    prop = get_object_or_404(_property_queryset(request.user), pk=pk)
 
-    tenants = Tenant.objects.filter(property=prop).order_by("-created_at")
-    rent_payments = RentPayment.objects.filter(tenant__property=prop).select_related("tenant").order_by(
+    tenants = _tenant_queryset(request.user).filter(property=prop).order_by("-created_at")
+    rent_payments = _rent_queryset(request.user).filter(tenant__property=prop).select_related("tenant").order_by(
         "-period_year", "-period_month"
     )
-    maintenance = MaintenanceRequest.objects.filter(property=prop).order_by("-created_at")
+    maintenance = _maintenance_queryset(request.user).filter(property=prop).order_by("-created_at")
 
     rent_paid_total = rent_payments.filter(status=RentPayment.Status.PAID).aggregate(s=Sum("amount_due"))["s"] or 0
     rent_due_total = rent_payments.filter(status=RentPayment.Status.DUE).aggregate(s=Sum("amount_due"))["s"] or 0
