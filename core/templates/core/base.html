@@ -341,10 +341,7 @@
       <div class="topbar-right">
         {% if request.user.is_authenticated %}
           <span>Signed in as <strong>{{ request.user.username }}</strong></span>
-          <form method="post" action="{% url 'logout' %}" style="margin:0;">
-            {% csrf_token %}
-            <button type="submit" class="btn">Log out</button>
-          </form>
+          <a class="btn" href="/accounts/logout/">Log out</a>
         {% else %}
           <a class="btn" href="{% url 'login' %}">Log in</a>
         {% endif %}
@@ -357,9 +354,7 @@
         <a href="{% url 'core:properties_list' %}">Properties</a>
         <a href="{% url 'core:tenants_list' %}">Tenants</a>
         <a href="{% url 'core:rent_list' %}">Rent</a>
-        <a href="{% url 'core:maintenance_list' %}">Maintenance</a>
       {% endif %}
-      <a href="/admin/">Admin</a>
     </nav>
 
     <section class="content-card">
