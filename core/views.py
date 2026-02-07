@@ -303,6 +303,7 @@ def tenant_edit(request, pk):
 @login_required
 def rent_edit(request, pk):
     rent_payment = get_object_or_404(RentPayment, pk=pk, tenant__property__owner=request.user)
+    previous_status = rent_payment.status
 
     if request.method == "POST":
         form = RentPaymentForm(request.POST, instance=rent_payment)
@@ -314,7 +315,10 @@ def rent_edit(request, pk):
                 messages.error(request, "Please select one of your tenants.")
             else:
                 updated.save()
-                messages.success(request, "Rent payment updated successfully.")
+                if previous_status != RentPayment.Status.PAID and updated.status == RentPayment.Status.PAID:
+                    messages.success(request, "Rent payment marked as paid.")
+                else:
+                    messages.success(request, "Rent payment updated successfully.")
                 return redirect("core:rent_list")
         else:
             messages.error(request, "Please correct the errors below.")
