@@ -1,0 +1,81 @@
+{% extends "core/public_base.html" %}
+{% block title %}Propertify | Remote Property Management{% endblock %}
+{% block content %}
+  <section class="hero card">
+    <h1>Smart Remote Property Management Platform</h1>
+    <p>
+      Propertify helps remote landlords manage properties with automation and trusted local execution.
+      We centralize communication, maintenance, and rent operations so owners gain transparency and peace of mind.
+    </p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="/accounts/login/">Login</a>
+      {% if request.user.is_authenticated %}
+        <a class="btn" href="{% url 'core:dashboard' %}">View Dashboard</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>The Problem</h2>
+    <ul>
+      <li>Maintenance and repairs are slow or unpredictable.</li>
+      <li>Tenant trust and payment reliability are difficult to manage remotely.</li>
+      <li>Communication breaks down across distance and time zones.</li>
+      <li>Manual workflows create delays, stress, and lost revenue.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Solution</h2>
+    <p>Automation plus human expertise in one workflow:</p>
+    <ul>
+      <li>Maintenance ticket creation and contractor routing.</li>
+      <li>Rent reminders, dues tracking, and late-payment alerts.</li>
+      <li>Centralized communication hub for tenants, landlords, and contractors.</li>
+      <li>Verified contractor network with real-time updates and reporting.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>How It Works</h2>
+    <ol class="how-steps">
+      <li>Tenant reports an issue, and a maintenance ticket is created automatically.</li>
+      <li>The ticket is routed to the right local contractor.</li>
+      <li>Contractor proposes timing, completes work, and updates status.</li>
+      <li>Tenant and landlord receive centralized progress updates.</li>
+      <li>Rent tracking and late-dues alerts run continuously.</li>
+      <li>Landlord receives monthly operational and financial reporting.</li>
+    </ol>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h3>Vision &amp; Mission</h3>
+      <p><strong>Vision:</strong> Make property ownership stress-free through automation and reliable human support.</p>
+      <p><strong>Mission:</strong> Simplify workflows, reduce operational risk, and improve landlord/tenant satisfaction globally.</p>
+    </section>
+
+    <section class="card">
+      <h3>Business Model</h3>
+      <ul>
+        <li>SaaS subscriptions for landlords (basic to premium).</li>
+        <li>Transaction fees for rent collection and maintenance payments.</li>
+        <li>Premium services like tenant placement and reporting upgrades.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Competitive Advantage</h2>
+    <ul>
+      <li>Remote-first product built for owners managing from abroad.</li>
+      <li>Three-way ecosystem: tenant, landlord, contractor in one system.</li>
+      <li>End-to-end automation from issue reporting to financial tracking.</li>
+      <li>Verified contractor network for trust and execution quality.</li>
+      <li>Centralized communication and real-time reporting for full visibility.</li>
+    </ul>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="/accounts/login/">Login to Propertify</a>
+    </div>
+  </section>
+{% endblock %}

@@ -15,6 +15,12 @@ def healthz(request):
     return HttpResponse("ok")
 
 
+def landing_page(request):
+    if request.user.is_authenticated:
+        return redirect("core:dashboard")
+    return render(request, "core/landing.html")
+
+
 def _render_form(request, form, title, cancel_url):
     return render(
         request,

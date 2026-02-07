@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Propertify{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #111924;
+      --line: #273446;
+      --text: #f6f8fb;
+      --muted: #a5b1bf;
+      --accent: #f58a1f;
+      --accent-soft: #3d2817;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at 90% 0%, rgba(245, 138, 31, 0.16), transparent 35%),
+        linear-gradient(160deg, #0a0f15, #111924 50%, #0d131b);
+    }
+
+    .container { max-width: 1080px; margin: 0 auto; padding: 20px 16px 40px; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(245, 138, 31, 0.35);
+      background: rgba(14, 21, 30, 0.9);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: 0.01em; }
+    .brand .dot { color: var(--accent); }
+
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: #192331;
+      color: #f8fbff;
+      padding: 8px 12px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      border-color: #f58a1f;
+      color: #0f1318;
+      background: linear-gradient(145deg, #ff9f3f, #f58a1f);
+    }
+
+    .btn:hover { filter: brightness(1.05); }
+
+    .card {
+      background: rgba(16, 24, 34, 0.92);
+      border: 1px solid rgba(245, 138, 31, 0.22);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    h1, h2, h3 { margin-top: 0; color: #ffab56; }
+    p, li { color: var(--muted); line-height: 1.55; }
+
+    .hero { padding: 30px 0 12px; }
+    .hero h1 { font-size: 2.1rem; margin-bottom: 8px; }
+    .hero p { font-size: 1.05rem; max-width: 760px; }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    section { margin-top: 14px; }
+
+    .how-steps { margin: 0; padding-left: 20px; }
+    .how-steps li { margin: 8px 0; }
+
+    @media (max-width: 760px) {
+      .hero h1 { font-size: 1.7rem; }
+      .container { padding: 14px 12px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <h1 class="brand">propertify<span class="dot">.</span></h1>
+      <a class="btn btn-primary" href="/accounts/login/">Login</a>
+    </header>
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
